@@ -1,0 +1,10 @@
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.8.5"
+manifest_format = "2.0"
+project_hash = "9d7a66204962f501633dfd9467f1e3455b00142c"
+
+[[deps.RareLotkaVolterra]]
+path = ".."
+uuid = "7f8a4234-2f47-4ba8-a777-d0896a6abc98"
+version = "1.0.0-DEV"
