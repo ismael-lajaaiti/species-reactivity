@@ -1,12 +1,27 @@
 """
-A Lotka Volterra community is defined by two parameters:
+    Community(A::AbstractMatrix, r::AbstractVector)
 
- 1. an interaction matrix `A`;
- 2. a vector of growth rate `r`;
+Lotka-Volterra `Community` defined by its interaction matrix `A`
+and its growth rate vector `r`.
+
+
+```jldoctest
+julia> A = [-1 0; 0 -1]
+       r = [1, 1]
+       Community(A, r)
+Community([-1 0; 0 -1], [1, 1])
+```
+
+See also [`lotka_volterra_dynamics`](@ref), [`equilibrium_abundance`](@ref)
+and [`jacobian`](@ref).
 """
 mutable struct Community
     A::AbstractMatrix
     r::AbstractVector
+    function Community(A, r)
+        @assert size(A, 1) == size(A, 2) == length(r)
+        new(A, r)
+    end
 end
 
 """
@@ -17,9 +32,9 @@ Return an empty [`Community`](@ref).
 empty_community() = Community(Array{Any}(undef, 0, 0), [])
 
 """
-    richness(community)
+    richness(community::Community)
 
-Species richness of the `community`.
+Species richness of the [`Community`](@ref).
 """
 richness(community::Community) = length(community.r)
 
@@ -105,11 +120,10 @@ end
 
 """
     assemble!(
-    community::Community;
-    tspan = (0, 100),
-    extinction_threshold = 1e-4,
-
-)
+        community::Community;
+        tspan = (0, 100),
+        extinction_threshold = 1e-4,
+    )
 
 Assemble the `community`.
 
@@ -147,15 +161,14 @@ end
 
 """
     create_communities(
-    Smin,
-    Smax,
-    n_communities;
-    create_interaction_matrix = S -> random_competition_matrix(S, 0.1),
-    create_growth_rates = S -> fill(1, S),
-    tspan = (0, 1_000),
-    max_iter = 10^5,
-
-)
+        Smin,
+        Smax,
+        n_communities;
+        create_interaction_matrix = S -> random_competition_matrix(S, 0.1),
+        create_growth_rates = S -> fill(1, S),
+        tspan = (0, 1_000),
+        max_iter = 10^5,
+    )
 
 Create `n_communities` for each richness between `Smin` and `Smax`.
 

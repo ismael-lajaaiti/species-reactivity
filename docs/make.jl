@@ -8,12 +8,13 @@ DocMeta.setdocmeta!(
     recursive = true,
 )
 
-gitlab = "https://gitlab.com/ismael-lajaaiti/RareLotkaVolterra.jl/"
+# GitLab repository where the package is hosted.
+repo = "https://gitlab.com/ismael-lajaaiti/RareLotkaVolterra.jl/"
 
 makedocs(;
     modules = [RareLotkaVolterra],
     authors = "Ismaël Lajaaiti <ismael.lajaaiti@gmail.com> and contributors",
-    repo = gitlab * "blob/{commit}{path}#{line}",
+    repo = repo * "blob/{commit}{path}#{line}",
     sitename = "RareLotkaVolterra.jl",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
