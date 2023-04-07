@@ -1,1 +1,3 @@
 using RareLotkaVolterra
+
+c = Community()

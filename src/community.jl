@@ -4,6 +4,7 @@
 Lotka-Volterra `Community` defined by its interaction matrix `A`
 and its growth rate vector `r`.
 
+# Example
 
 ```jldoctest
 julia> A = [-1 0; 0 -1]
@@ -25,27 +26,36 @@ mutable struct Community
 end
 
 """
-    empty_community()
+    Community()
 
-Return an empty [`Community`](@ref).
+Create an empty [`Community`](@ref).
+
+# Example
+
+```jldoctest
+julia> c = Community() # Create an empty community.
+       (size(c.A), length(c.r)) == ((0, 0), 0)
+true
+```
 """
-empty_community() = Community(Array{Any}(undef, 0, 0), [])
+Community() = Community(Array{Any}(undef, 0, 0), [])
+
 
 """
     richness(community::Community)
 
 Species richness of the [`Community`](@ref).
+
+# Example
+
+```jldoctest
+julia> richness(Community()) == 0
+true
+```
+
+See also [`Community`](@ref).
 """
 richness(community::Community) = length(community.r)
-
-"""
-    isempty(community::Community)
-
-Is the community empty, i.e. has a zero species richness?
-
-See also [`richness`](@ref) and [`Community`](@ref).
-"""
-Base.isempty(community::Community) = richness(community) == 0
 
 """
     equilibrium_abundance(community::Community)
@@ -119,110 +129,182 @@ function random_competition_matrix(S, std)
 end
 
 """
+    empty!(c::Community)
+
+Remove all species of a [`Community`](@ref).
+
+# Example
+
+```jldoctest
+julia> c = Community([0 -1; 0 -1], [1, 1])
+       richness(c)
+2
+
+julia> empty!(c)
+       richness(c)
+0
+```
+"""
+function Base.empty!(community::Community)
+    empty_community = Community()
+    community.A = empty_community.A
+    community.r = empty_community.r
+    return nothing
+end
+
+"""
+    keep_surviving!(c::Community, surviving_species)
+
+Remove species from the [`Community`](@ref)
+that are not in the list of `surviving_species`.
+
+# Example
+
+```jldoctest
+julia> c = Community([-1 0; 0 -2], [1, 2])
+       surviving_species = []
+       keep_surviving!(c, surviving_species)
+       richness(c)
+0
+
+julia> c = Community([-1 0; 0 -2], [1, 2])
+       surviving_species = [1]
+       keep_surviving!(c, surviving_species)
+       (c.A, c.r) == ([-1;;], [1])
+true
+```
+"""
+function keep_surviving!(c::Community, surviving_species)
+    c.A = c.A[surviving_species, surviving_species]
+    c.r = c.r[surviving_species]
+    return nothing
+end
+
+"""
     assemble!(
         community::Community;
-        tspan = (0, 100),
-        extinction_threshold = 1e-4,
+        tspan = (0, 1_000),
+        extinction_threshold = 1e-6,
     )
 
-Assemble the `community`.
+Assemble the [`Community`](@ref), i.e. run the dynamics and filter extinct species.
 
-Run the the dynamics for the defined `tspan` and once the equilibrium is reached
-remove extinct species, i.e. species whose abundance is below the `extinction_threshold`.
+## Keyword arguments
 
-See also [`Community`](@ref).
+  - `tspan = (0, 1_000)`: duration of the simulation
+  - `extinction_threshold = 1e-6`: species with lower abundance than this threshold
+    at the end of a simulation are considered to be extinct
+
+## Example
+
+```jldoctest
+julia> S = 20 # Species richness.
+       sd = 0.1 # Interaction standard deviation.
+       A = random_competition_matrix(S, sd)
+       r = fill(1, S)
+       c = Community(A, r)
+       assemble!(c)
+       richness(c) <= S
+true
+```
+
+See also [`Community`](@ref) and [`keep_surviving!`](@ref).
 """
-function assemble!(
-    community::Community;
-    tspan = (0, 1_000),
-    extinction_threshold = 1e-4,
-)
+function assemble!(community::Community; tspan = (0, 1_000), extinction_threshold = 1e-6)
     S = richness(community)
-    N0 = rand(Uniform(0.1, 1), S) # initial abundances
+    N0 = rand(Uniform(0.1, 1), S)
     problem = ODEProblem(lotka_volterra_dynamics, N0, tspan, community)
-    sol = solve(problem; reltol = 1e-8)
-    # If error during the simulation, return prematurly an empty community.
-    sol.retcode == :DtLessThanMin && return empty_community()
-    is_extinct = sol[end] .< extinction_threshold # extinct species below threshold
-    surviving_species = (1:S)[.!is_extinct]
-    # If not surviving species, return prematurly nothing.
-    isempty(surviving_species) && return empty_community()
-    # Update community by keeping only surviving species and check that is stable.
-    community.A = community.A[surviving_species, surviving_species]
-    community.r = community.r[surviving_species]
-    Neq_surviving = equilibrium_abundance(community)
-    # If a negative biomass or unstable equilibrium return an empty community.
-    if !all(Neq_surviving .> 0) || !is_stable(community)
-        empty = empty_community()
-        community.A = empty.A
-        community.r = empty.r
+    sol = solve(problem)
+    if sol.retcode == :DtLessThanMin # Error during simulation, return empty community.
+        empty!(community)
+        return nothing
     end
+    surviving_species = findall(>(extinction_threshold), sol[end])
+    keep_surviving!(community, surviving_species)
+    richness(community) == 0 && return nothing # No surviving species.
+    Neq_surviving = equilibrium_abundance(community)
+    if any(Neq_surviving .< 0) || !is_stable(community) # Check equilibrium.
+        empty!(community)
+    end
+    return nothing
 end
 
 """
     create_communities(
         Smin,
         Smax,
-        n_communities;
-        create_interaction_matrix = S -> random_competition_matrix(S, 0.1),
+        n;
+        create_interaction_matrix = S -> random_competition_matrix(S, 0.2),
         create_growth_rates = S -> fill(1, S),
         tspan = (0, 1_000),
         max_iter = 10^5,
     )
 
-Create `n_communities` for each richness between `Smin` and `Smax`.
+Create `n` Lotka-Volterra [`Community`](@ref) for each richness between `Smin` and `Smax`.
 
-## Keyword arguments
+# Keyword arguments
 
   - `create_interaction_matrix = S -> [`random_competition_matrix`](@ref)(S, 0.2)`:
-    function that creates the interaction matrix given a richness.
-  - `create_growth_rates = S -> fill(1, S)`: function that creates the vector of
-    growth rates.
-  - `tspan = (0, 1_000)` = time span of the simulations.
-  - `max_iter = 10^5` = maximum number of iteration before quiting the while loop
-    if the communities have not been all created yet.
+    function to create the interaction matrix given a richness
+  - `create_growth_rates = S -> fill(1, S)`: function create the vector of
+    growth rates
+  - `tspan = (0, 1_000)` = time span of the simulations
+  - `max_iter = 10^5` = maximum number of iteration before leaving the `while` loop
+    if the communities have not been all created yet
 
-See also [`Community`](@ref).
+# Example
+
+```jldoctest
+julia> c = create_communities(5, 10, 2) # Create 2 communities of S = 5, ..., 10 species.
+       c8 = c[8][1] # First community of 8 species.
+       richness(c8) == 8
+true
+```
+
+See also [`Community`](@ref) and [`assemble!`](@ref).
 """
 function create_communities(
     Smin,
     Smax,
-    n_communities;
+    n;
     create_interaction_matrix = S -> random_competition_matrix(S, 0.2),
     create_growth_rates = S -> fill(1, S),
     tspan = (0, 1_000),
     max_iter = 10^5,
+    verbose = false,
 )
-    # Initially the communities will start with a richness between Smin_pool and
-    # Smax_pool, with Smax_pool >= Smax has we know that during the assembly
-    # the community will loose species.
-    # Thus by starting with an initial higher we increase our chances to have a final
-    # diversity inside the target range [Smin; Smax].
+    # Communities start with richness in [Smin_pool, Smax_pool], with
+    # Smin <= Smin_pool and Smax <= Smax_pool, as community richness can only
+    # decrease during the assembly.
     Smax_pool = round(Integer, 1.5 * Smax)
     Smin_pool = Smin
     Srange = Smin:Smax
     community_dict = Dict([S => Community[] for S in Srange])
+    is_filled(vec) = length(vec) == n
+    all_filled(dict) = all(is_filled.(values(dict)))
     iter = 0
-    is_filled(vec, n) = length(vec) == n
-    all_community_filled(dict, n) = all(is_filled.(values(dict), n))
-    while !all_community_filled(community_dict, n_communities) && iter < max_iter
+    while !all_filled(community_dict) && iter < max_iter
         for S in Smin_pool:Smax_pool
             r = create_growth_rates(S)
             A = create_interaction_matrix(S)
             community = Community(A, r)
-            assemble!(community; tspan = tspan)
+            assemble!(community; tspan)
             Sfinal = richness(community)
-            if Smin <= Sfinal <= Smax && !is_filled(community_dict[Sfinal], n_communities)
+            if Smin <= Sfinal <= Smax && !is_filled(community_dict[Sfinal])
                 push!(community_dict[Sfinal], community)
             end
         end
         # Increase Smin_pool if all community of lower richness are already filled.
-        Smin_pool = findfirst(S -> !is_filled(community_dict[S], n_communities), Smin:Smax)
+        Smin_pool = findfirst(S -> !is_filled(community_dict[S]), Smin:Smax)
+        verbose && @info "Iteration $iter: $(length.(values(community_dict)))"
         iter += 1
     end
     community_dict
 end
 
-function create_communities(S, n_communities; kwargs...)
-    create_communities(S, S, n_communities; kwargs...)
-end
+"""
+    create_communities(S, n; kwargs...)
+
+Create `n` Lotka-Volterra [`Community`](@ref) of size `S`.
+"""
+create_communities(S, n; kwargs...) = create_communities(S, S, n; kwargs...)
