@@ -84,7 +84,7 @@ end
 
 Is the `community` stable?
 
-The community is said to be stable if the dominant eigen value
+The community is said to be stable if the dominant eigenvalue
 of its [`jacobian`](@ref) is negative.
 
 See also [`Community`](@ref).
@@ -99,8 +99,22 @@ end
 
 Lotka-Volterra differential equations of the species abundances `N`.
 """
-function lotka_volterra_dynamics(N, community::Community, _)
+function lotka_volterra(N, community::Community, _)
     Diagonal(N) * (community.r + community.A * N)
+end
+
+"""
+    equilibrium_lotka_volterra(x, p, _)
+
+Lotka-Volterra differential equations of the species abundances `N` relative to the
+equilibrium.
+Thus, if the equilibrium is stable we expect that ||x|| tends to zero.
+`p` is a collection whose first item contains the [`Community`](@ref)
+and second item the species [`equilibrium_abundance`](@ref).
+"""
+function equilibrium_lotka_volterra(x, p, _)
+    community, Neq = p
+    Diagonal(Neq + x) * (community.A * x)
 end
 
 """
@@ -213,7 +227,7 @@ See also [`Community`](@ref) and [`keep_surviving!`](@ref).
 function assemble!(community::Community; tspan = (0, 1_000), extinction_threshold = 1e-6)
     S = richness(community)
     N0 = rand(Uniform(0.1, 1), S)
-    problem = ODEProblem(lotka_volterra_dynamics, N0, tspan, community)
+    problem = ODEProblem(lotka_volterra, N0, tspan, community)
     sol = solve(problem)
     if sol.retcode == :DtLessThanMin # Error during simulation, return empty community.
         empty!(community)

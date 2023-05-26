@@ -1,3 +1,0 @@
-using RareLotkaVolterra
-
-c = Community()
