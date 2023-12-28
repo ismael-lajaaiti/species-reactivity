@@ -79,6 +79,14 @@ function jacobian(community::Community)
     Diagonal(Neq) * community.A
 end
 
+reactivity(j) = eigvals((j + transpose(j)) / 2)[end]
+
+function nonlinear_reactivity(community::Community)
+    Neq = equilibrium_abundance(community)
+    j = community.A * Diagonal(Neq)
+    eigvals((j + transpose(j)) / 2)[end]
+end
+
 """
     is_stable(community::Community)
 
@@ -139,6 +147,11 @@ The diagonal elements are set to `-1`.
 """
 function random_competition_matrix(S, std)
     A = -abs.(rand(Normal(0, std), S, S))
+    A - Diagonal(A) - I
+end
+
+function random_competition_matrix(S, mu, std)
+    A = -abs.(rand(Normal(mu, std), S, S))
     A - Diagonal(A) - I
 end
 
@@ -224,7 +237,7 @@ true
 
 See also [`Community`](@ref) and [`keep_surviving!`](@ref).
 """
-function assemble!(community::Community; tspan = (0, 1_000), extinction_threshold = 1e-6)
+function assemble!(community::Community; tspan = (0, 1_000), extinction_threshold = 1e-6, return_surviving = false)
     S = richness(community)
     N0 = rand(Uniform(0.1, 1), S)
     problem = ODEProblem(lotka_volterra, N0, tspan, community)
@@ -240,6 +253,7 @@ function assemble!(community::Community; tspan = (0, 1_000), extinction_threshol
     if any(Neq_surviving .< 0) || !is_stable(community) # Check equilibrium.
         empty!(community)
     end
+    return_surviving && return surviving_species
     return nothing
 end
 
@@ -322,3 +336,18 @@ end
 Create `n` Lotka-Volterra [`Community`](@ref) of size `S`.
 """
 create_communities(S, n; kwargs...) = create_communities(S, S, n; kwargs...)
+
+complexity(c::Community) = complexity(c.A)
+function complexity(A::AbstractMatrix)
+    norm(A - Diagonal(A))
+end
+
+departure_from_normality(c::Community) = departure_from_normality(c.A)
+function departure_from_normality(A)
+    sqrt(norm(A)^2 - sum(norm.(eigvals(A)).^2))
+end
+
+function shannon_diversity(Neq)
+    p = Neq / sum(Neq)
+    exp(- sum(p .* log.(p)))
+end

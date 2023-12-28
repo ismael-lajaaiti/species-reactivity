@@ -69,3 +69,58 @@ function perturbation_no_extinction(create_perturbation, Neq; iter_max = 10^5)
 end
 
 amplitude(response, t_begin, t_end) = quadgk(t -> norm(response(t))^2, t_begin, t_end)[1]
+
+function trajectory_error(x_true, x_hat; tspan = (0, 10_000))
+    e = quadgk(t -> norm(x_true(t) - x_hat(t)), tspan[1], tspan[2]; rtol = 1e-2)[1]
+    normalization = quadgk(t -> norm(x_true(t)), tspan[1], tspan[2]; rtol = 1e-2)[1]
+    # normalization = norm(x_true(tspan[1]))
+    # normalization = 1
+    e / normalization
+end
+
+function transitional_regime_duration(
+    x;
+    threshold = 1e-2,
+    t_init = 10_000,
+    t_max = 1e5,
+    delta_t = 1,
+)
+    t_end = t_init
+    x0_norm = abs(x(0)) # Strength of initial perturbation.
+    while t_end < t_max && abs(x(t_end)) > (threshold * x0_norm)
+        t_end *= 10
+    end
+    @assert t_end <= t_max
+    t_begin = t_end == t_init ? 0 : (t_end / 10)
+    time_steps = values(t_begin:delta_t:t_end)
+    x_sampled = abs.(x.(time_steps))
+    x_sampled_reversed = reverse(x_sampled)
+    for (i, x_t) in enumerate(x_sampled_reversed)
+        x_t > (threshold * x0_norm) && return reverse(time_steps)[i]
+    end
+    return nothing
+end
+
+function nonlinear_excursion_data(x, N; tspan = (0, 100_000), delta_t = 1)
+    time_steps = values(tspan[1]:delta_t:tspan[2])
+    z(t) = x(t) / N
+    z_sampled = abs.(z.(time_steps))
+    z0 = abs(z(0))
+    max_dist = maximum(z_sampled) - z0
+    time = count(>=(z0), abs.(z_sampled)) * delta_t
+    (; max_dist, time)
+end
+
+function integrate(fun, tspan; n_timesteps)
+    trajectory_matrix = reduce(hcat, solution)
+    S, n_timesteps = size(trajectory_matrix)
+    integrals = zeros(S)
+    for n_t in 1:(n_timesteps-1)
+        delta_t = solution.t[n_t+1] - solution.t[n_t]
+        for i in 1:S
+            u_mean = (trajectory_matrix[n_t] + trajectory_matrix[n_t+1]) / 2
+            integrals[i] += delta_t * u_mean
+        end
+    end
+    integrals
+end

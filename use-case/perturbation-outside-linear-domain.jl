@@ -7,24 +7,28 @@ using Statistics
 # Compute the probability of generating an isotrope perturbation outside the linearity
 # domain for different `intensity_values`.
 S = 50 # Community richness.
-n = 10 # Number of communities.
+n = 50 # Number of communities.
 sigma = 0.2 # Typical interspecific interaction strength.
+n_perturbation = 100
 create_interaction_matrix(S) = random_competition_matrix(S, sigma)
 coms = create_communities(S, n; create_interaction_matrix)[S]
 intensity_values = range(0.01, 0.1; length = 10)
-df = DataFrame(; community_id = [], intensity = [], is_nonlinear = [], extinction = [])
+df = DataFrame(; community_id = [], intensity = [], z_max = [], type = [])
 for (c_id, com) in enumerate(coms)
     Neq = equilibrium_abundance(com)
+    a = expected_proportional_intensity(Neq)
     for intensity in intensity_values, i in 1:n_perturbation
-        x0 = isotrope_perturbation(Neq, intensity * sum(Neq))
-        is_nonlinear = any(abs.(x0) .> Neq)
-        extinction = any(Neq + x0 .< 0) # Is `true` if there is an extinction.
-        push!(df, [c_id, intensity, is_nonlinear, extinction])
+        x0_iso = isotrope_perturbation(Neq, intensity * sum(Neq))
+        x0_prop = proportional_perturbation(Neq, intensity * sum(Neq), a)
+        for (type, x0) in Dict(:isotrope => x0_iso, :proportional => x0_prop)
+            z0 = x0 ./ Neq
+            push!(df, [c_id, intensity, maximum(z0), type])
+        end
     end
 end
 p_df = combine(
-    groupby(df, :intensity),
-    [:is_nonlinear, :extinction] .=> mean .=> [:p_nonlinear, :p_extinction],
+    groupby(df, [:intensity, :type]),
+    :z_max .=> mean .=> :z_max_mean,
 )
 transform!(p_df, :intensity => x -> 100x; renamecols = false)
 
