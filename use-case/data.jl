@@ -1,5 +1,6 @@
-include("makie-theme.jl")
+import SpecialFunctions: erfinv
 using CSV
+using CairoMakie
 using DataFrames
 using Distributions
 using GLM
@@ -7,7 +8,8 @@ using LinearAlgebra
 using QuadGK
 using RareLotkaVolterra
 using Statistics
-import SpecialFunctions: erfinv
+
+include("makie-theme.jl")
 
 # Read data.
 df_K = CSV.read("../data/carrying_capacity.csv", DataFrame)
