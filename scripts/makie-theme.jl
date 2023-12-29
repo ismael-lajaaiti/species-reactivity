@@ -16,6 +16,11 @@ p_theme = Theme(;
         yticklabelsize = 10,
     ),
     Colorbar = Attributes(; ticklabelsize = 10),
-    Legend = Attributes(; bgcolor = :grey80, rowgap = -5, labelsize = 10, titlesize = 10),
+    Legend = Attributes(;
+        backgroundcolor = :grey80,
+        rowgap = -5,
+        labelsize = 10,
+        titlesize = 10,
+    ),
 )
 

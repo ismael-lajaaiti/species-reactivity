@@ -1,3 +1,4 @@
+using ColorSchemes
 using DataFrames
 using Distributions
 using GLM
@@ -31,9 +32,6 @@ create_interaction_matrix(S) = random_competition_matrix(S, sigma)
 com = create_communities(S, n; create_interaction_matrix)[S][1] # Get a community.
 A = com.A
 eta = equilibrium_abundance(com)
-remove_diagonal(A) = A - Diagonal(A)
-
-get_reactivity(A, Neq, i) = sqrt(sum((remove_diagonal(A)[i, :] .* Neq) .^ 2))
 reactivity = [get_reactivity(A, eta, i) for i in 1:S]
 
 K1 = (1 .+ rand(Normal(0, 0.1), S)) ./ eta .^ 1.25
@@ -48,6 +46,7 @@ r = SpeciesReactivity.response(com, x0)
 time_steps = collect(0:0.1:50)
 eta_true = [abs.(r.nonlinear(t)) for t in time_steps]
 eta_lin = [abs.(r.linear(t)) for t in time_steps]
+
 with_theme(p_theme) do
     fig = Figure()
     strokewidth = 0.5
@@ -96,7 +95,7 @@ with_theme(p_theme) do
     ax = Axis(fig[1, 2]; xlabel = "Relative yield", ylabel = "Reactivity")
     scatter!(eta, reactivity; color, strokewidth, markersize)
     eta_linrange = LinRange(0, maximum(eta), 100)
-    exp_reactivity_full = sqrt.(full_exp_reactivity.(eta_linrange, Ref(com)))
+    exp_reactivity_full = sqrt.(expected_reactivity_squared.(eta_linrange, Ref(com)))
     lines!(
         eta_linrange,
         exp_reactivity_full;
@@ -109,59 +108,10 @@ with_theme(p_theme) do
     Label(fig[2, 1:2], "Selection effect < 0"; tellwidth = false, fontsize = 20)
     Label(fig[2, 3], "Selection effect ≥ 0"; tellwidth = false, fontsize = 20)
     save(
-        "figures/selection-effect.svg",
-        # "/tmp/plot.png",
-        fig;
-        resolution = 1.1 .* (620, 620),
-        px_per_unit = 3,
-    )
-end
-
-abundance = yield .* K
-df = DataFrame(; reactivity, abundance, yield)
-ols_yield = lm(@formula(reactivity ~ yield), df)
-ols_abundance = lm(@formula(reactivity ~ abundance), df)
-
-with_theme(p_theme) do
-    fig = Figure()
-    a = fig[1, 1] = GridLayout()
-    b = fig[1, 2] = GridLayout()
-    for (layout, label) in zip([a, b], ["A", "B"])
-        Label(
-            layout[1, 1, TopLeft()],
-            label;
-            font = :bold,
-            padding = (0, 5, 5, 0),
-            halign = :right,
-        )
-    end
-    ax1 =
-        Axis(fig[1, 1]; xlabel = L"Abundance, $N_i^*$", ylabel = L"Reactivity, $R_0^{(i)}$")
-    color = :black
-    alpha = 1
-    scatter!(abundance, reactivity; color, alpha)
-    # Linear regression.
-    a, b = coef(ols_abundance)
-    r2_abundance = round(r2(ols_abundance); digits = 2)
-    xlims = [minimum(abundance), maximum(abundance)]
-    ylims = a .+ b .* xlims
-    lines!(xlims, ylims; color = :grey, label = L"r^2 = %$r2_abundance")
-    axislegend()
-    ax2 = Axis(fig[1, 2]; xlabel = L"Relative yield, $\eta_i^*$")
-    scatter!(yield, reactivity; color, alpha)
-    # Linear regression.
-    a, b = coef(ols_yield)
-    r2_yield = round(r2(ols_yield); digits = 2)
-    xlims = [minimum(yield), maximum(yield)]
-    ylims = a .+ b .* xlims
-    lines!(xlims, ylims; color = :grey, label = L"r^2 = %$r2_yield")
-    axislegend()
-    save(
+        # "figures/selection-effect.svg",
         "/tmp/plot.png",
-        # "figures/reactivity-abundance-and-yield.png",
         fig;
-        resolution = 1.1 * (620, 520),
+        size = 1.1 .* (620, 620),
         px_per_unit = 3,
     )
 end
-
