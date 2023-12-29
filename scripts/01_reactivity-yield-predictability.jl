@@ -58,7 +58,7 @@ Threads.@threads for community_idx in 1:n_communities
     for intensity in intensity_values, k in 1:n_perturbations
         @info "Perturbation $k"
         x0 = proportional_perturbation(yield, intensity * sqrt(S), 1, true)
-        r = response(com, x0)
+        r = SpeciesReactivity.response(com, x0)
         for i in 1:S
             deviation = trajectory_error(
                 t -> r.nonlinear(t; idxs = i),
@@ -144,7 +144,7 @@ with_theme(p_theme) do
         # "figures/reactivity-yield-predictability.eps",
         "/tmp/plot.png",
         fig;
-        resolution = (600, 320),
+        save = (600, 320),
         px_per_unit = 3,
     )
 end
