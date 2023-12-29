@@ -25,7 +25,7 @@ function response(community::Community, x0; tspan = (0, 10_000))
     N0 = Neq + x0
     @assert all(N0 .> 0) # Check that there is no extinction at t = 0.
     linear_pb = ODEProblem(jacobian_dynamics, x0, tspan, jacobian(community))
-    nonlinear_pb = ODEProblem(equilibrium_lotka_volterra, x0, tspan, [community, Neq])
+    nonlinear_pb = ODEProblem(equilibrium_lotka_volterra, x0, tspan, (community, Neq))
     (; linear = solve(linear_pb; alg = RK4()), nonlinear = solve(nonlinear_pb; alg = RK4()))
 end
 

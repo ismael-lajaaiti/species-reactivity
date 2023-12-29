@@ -246,7 +246,7 @@ function assemble!(community::Community; tspan = (0, 1_000), extinction_threshol
         empty!(community)
         return nothing
     end
-    surviving_species = findall(>(extinction_threshold), sol[end])
+    surviving_species = findall(>(extinction_threshold), sol.u[end])
     keep_surviving!(community, surviving_species)
     richness(community) == 0 && return nothing # No surviving species.
     Neq_surviving = equilibrium_abundance(community)
