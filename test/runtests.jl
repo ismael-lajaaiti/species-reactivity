@@ -1,7 +1,7 @@
 using Documenter
 using JuliaFormatter
 using Random
-using RareLotkaVolterra
+using SpeciesReactivity
 using Test
 
 seed = rand(1:10^6)
@@ -9,12 +9,12 @@ Random.seed!(seed)
 @info "Seed set to $seed."
 
 DocMeta.setdocmeta!(
-    RareLotkaVolterra,
+    SpeciesReactivity,
     :DocTestSetup,
-    :(using RareLotkaVolterra);
+    :(using SpeciesReactivity);
     recursive = true,
 )
-doctest(RareLotkaVolterra)
+doctest(SpeciesReactivity)
 println("------------------------------------------")
 
 test_files = [

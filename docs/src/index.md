@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = RareLotkaVolterra
+CurrentModule = SpeciesReactivity
 ```
 
-# RareLotkaVolterra
+# SpeciesReactivity
 
-Documentation for [RareLotkaVolterra](https://gitlab.com/Ismaël Lajaaiti/RareLotkaVolterra.jl).
+Documentation for [SpeciesReactivity](https://github.com/ismael-lajaaiti/species-reactivity).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [RareLotkaVolterra]
+Modules = [SpeciesReactivity]
 ```

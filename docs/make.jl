@@ -1,21 +1,21 @@
-using RareLotkaVolterra
+using SpeciesReactivity
 using Documenter
 
 DocMeta.setdocmeta!(
-    RareLotkaVolterra,
+    SpeciesReactivity,
     :DocTestSetup,
-    :(using RareLotkaVolterra);
+    :(using SpeciesReactivity);
     recursive = true,
 )
 
 # GitLab repository where the package is hosted.
-repo = "https://gitlab.com/ismael-lajaaiti/RareLotkaVolterra.jl/"
+repo = "https://github.com/ismael-lajaaiti/species-reactivity"
 
 makedocs(;
-    modules = [RareLotkaVolterra],
+    modules = [SpeciesReactivity],
     authors = "Ismaël Lajaaiti <ismael.lajaaiti@gmail.com> and contributors",
     repo = repo * "blob/{commit}{path}#{line}",
-    sitename = "RareLotkaVolterra.jl",
+    sitename = "SpeciesReactivity.jl",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
         edit_link = "main",
