@@ -6,10 +6,13 @@ using Distributions
 using GLM
 using LinearAlgebra
 using QuadGK
+using Random
 using SpeciesReactivity
 using Statistics
 
 include("makie-theme.jl")
+
+Random.seed!(113) # For reproducibility.
 
 # Read data.
 df_K = CSV.read("../data/carrying_capacity.csv", DataFrame)
@@ -61,7 +64,7 @@ while length(communities) < n_commmunities || iter > 10_000
         push!(communities, c)
         push!(surviving_species, idx)
     end
-    iter += 1
+    global iter += 1
 end
 
 function get_K(c, surviving_species, df_K)
@@ -150,9 +153,10 @@ with_theme(p_theme) do
     ax4 = Axis(fig[4, 1]; xlabel = "Δ tot. abundance", ylabel = "Time", yscale = log10)
     lines!(time_steps, abundance_true; color = :black, linewidth)
     lines!(time_steps, abundance_lin; color = :black, linewidth, linestyle = :dash)
+    isdir("figures") || mkdir("figures")
     save(
-        "/tmp/plot.png",
-        # "figures/data.svg",
+        # "/tmp/plot.png",
+        "figures/03_data.png",
         fig;
         size = (500, 600),
         px_per_unit = 3,

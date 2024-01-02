@@ -4,8 +4,11 @@ using DataFrames
 using Distributions
 using LinearAlgebra
 using QuadGK
+using Random
 using SpeciesReactivity
 using Statistics
+
+Random.seed!(111) # For reproduciblity.
 
 include("makie-theme.jl")
 
@@ -140,9 +143,10 @@ with_theme(p_theme) do
             halign = :right,
         )
     end
+    isdir("figures") || mkdir("figures")
     save(
-        # "figures/reactivity-yield-predictability.eps",
-        "/tmp/plot.png",
+        "figures/01_reactivity-yield-predictability.png",
+        # "/tmp/plot.png",
         fig;
         save = (600, 320),
         px_per_unit = 3,

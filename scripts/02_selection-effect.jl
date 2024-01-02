@@ -1,13 +1,17 @@
+using CairoMakie
 using ColorSchemes
 using DataFrames
 using Distributions
 using GLM
 using LinearAlgebra
 using QuadGK
+using Random
 using SpeciesReactivity
 using Statistics
 
-include("makie-theme.jl")
+Random.seed!(112)
+
+include("makie-theme.jl") # For reproducibility.
 
 S = 30
 n = 1
@@ -107,9 +111,10 @@ with_theme(p_theme) do
     # axislegend(; position = :lb)
     Label(fig[2, 1:2], "Selection effect < 0"; tellwidth = false, fontsize = 20)
     Label(fig[2, 3], "Selection effect ≥ 0"; tellwidth = false, fontsize = 20)
+    isdir("figures") || mkdir("figures")
     save(
-        # "figures/selection-effect.svg",
-        "/tmp/plot.png",
+        "figures/02_selection-effect.png",
+        # "/tmp/plot.png",
         fig;
         size = 1.1 .* (620, 620),
         px_per_unit = 3,
