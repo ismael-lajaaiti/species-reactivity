@@ -39,9 +39,9 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()' # Install Julia packages.
 Finally, you can execute the scripts.
 
 ```bash
-julia --project=scripts 01_reactivity-yield-predictability.jl
-julia --project=scripts 02_selection-effect.jl
-julia --project=scripts 03_data.jl
+julia --project=. 01_reactivity-yield-predictability.jl
+julia --project=. 02_selection-effect.jl
+julia --project=. 03_data.jl
 ```
 
 Figures are saved in the `scripts/figures/` directory.
