@@ -5,9 +5,6 @@ GitHub repository associated to the [Lajaaiti et al., 2023](change-url) article.
 > [!NOTE]
 > If you have any questions, please [open an issue](https://github.com/ismael-lajaaiti/species-reactivity/issues) or contact me by e-mail at ismael.lajaaiti@gmail.com.
 
-
-For any questions, please contact ismael.lajaaiti@gmail.com.
-
 ## Abstract
 
 The response of communities to perturbations is usually measured at the community level which disregards
