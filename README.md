@@ -2,6 +2,12 @@
 
 GitHub repository associated to the [Lajaaiti et al., 2023](change-url) article.
 
+> [!NOTE]
+> If you have any questions, please [open an issue](https://github.com/ismael-lajaaiti/species-reactivity/issues) or contact me by e-mail at ismael.lajaaiti@gmail.com.
+
+
+For any questions, please contact ismael.lajaaiti@gmail.com.
+
 ## Abstract
 
 The response of communities to perturbations is usually measured at the community level which disregards
@@ -46,13 +52,11 @@ julia --project=. 03_data.jl
 
 Figures are saved in the `scripts/figures/` directory.
 
-> [!NOTE]
-> If you are unable to reproduce the figures, you can [open an issue](https://github.com/ismael-lajaaiti/species-reactivity/issues), so we can help you.
 
 ## Structure of the code
 
-This project is structured as Julia Package named `SpeciesReactivity`.
-The package contains general functions used by the scripts of the article.
+This project is structured as a Julia package named `SpeciesReactivity`.
+The package contains general functions used by the different scripts producing the figures of the article.
 For instance, the `response` function allows simulating the response of a community to a specified perturbation.
 The code of the package is stored in the `src/` directory.
 The code of the package is tested in the `test/` directory.
