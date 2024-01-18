@@ -19,19 +19,12 @@ sigma = 0.25
 create_interaction_matrix(S) = random_competition_matrix(S, sigma)
 com = create_communities(S, n; create_interaction_matrix)[S][1] # Get a community.
 eta = equilibrium_abundance(com)
-color_scheme = ColorSchemes.seaborn_pastel
-
-K = eta .* (1 .+ rand(Normal(0, 0.2), S))
-N = K .* eta
-K = rand(Normal(1, 0.2), S)
-K = -eta .* (1 .+ rand(Normal(0, 0.3), S)) .+ 1.5 * maximum(eta)
-
 
 # Compute the probability of generating an isotrope perturbation outside the linearity
 # domain for different `intensity_values`.
-S = 30 # Community richness.
+S = 50 # Community richness.
 n = 1 # Number of communities.
-sigma = 0.26
+sigma = 0.15
 create_interaction_matrix(S) = random_competition_matrix(S, sigma)
 com = create_communities(S, n; create_interaction_matrix)[S][1] # Get a community.
 A = com.A
@@ -39,22 +32,133 @@ eta = equilibrium_abundance(com)
 reactivity = [get_reactivity(A, eta, i) for i in 1:S]
 
 K1 = (1 .+ rand(Normal(0, 0.1), S)) ./ eta .^ 1.25
-# K1 = (10 .+ rand(Normal(0, 0.1), S) .- 10 * eta) ./ eta
 K2 = (1 .+ rand(Normal(0, 0.1), S)) ./ eta
-# K3 = (1 .+ rand(Normal(0, 0.1), S))
 K3 = (1 .+ rand(Normal(0, 0.1), S)) .* eta
 K_vec = [K1, K2, K3]
-idx = argmin(eta)
-x0 = remove_diagonal(A)[idx, :] .* eta
-r = SpeciesReactivity.response(com, x0)
-time_steps = collect(0:0.1:50)
-eta_true = [abs.(r.nonlinear(t)) for t in time_steps]
-eta_lin = [abs.(r.linear(t)) for t in time_steps]
+n_perturbations = 1_000
+t_max = 1_000
+df = DataFrame(; K_index = Int64[], community_response = Float64[])
+for k in 1:n_perturbations
+    @info "Perturbation $k"
+    A = com.A
+    x0 = proportional_perturbation(eta, intensity * sqrt(S), 1, true)
+    r = SpeciesReactivity.response(com, x0)
+    for (K_idx, K) in enumerate(K_vec)
+        delta_total_abundance(delta_eta) = abs(sum(K .* delta_eta))
+        a = delta_total_abundance(x0) * t_max
+        com_response = quadgk(t -> (delta_total_abundance(r.nonlinear(t)) / a), 0, t_max)[1]
+        push!(df, [K_idx, com_response])
+    end
+end
 
-with_theme(p_theme) do
+# Main figure.
+with_theme(publication_theme) do
+    fig = Figure()
+    panel_a = fig[1, 1:2] = GridLayout()
+    panel_b = fig[2, 1] = GridLayout()
+    panel_c = fig[2, 2] = GridLayout()
+    panel_d = fig[3, 1:2] = GridLayout()
+    strokewidth = 0.5
+    markersize = 9
+    color = :grey
+    title_se = ["Positive \n selection effect", "Negative \n selection effect"]
+    # Panel A: reactivity vs. relative yield.
+    ax = Axis(fig[1, 1:2]; xlabel = "Species relative yield", ylabel = "Species reactivity")
+    scatter!(eta, reactivity; color, strokewidth, markersize)
+    eta_linrange = LinRange(0, maximum(eta), 100)
+    exp_reactivity_full = sqrt.(expected_reactivity_squared.(eta_linrange, Ref(com)))
+    lines!(
+        eta_linrange,
+        exp_reactivity_full;
+        color = :orange,
+        label = "expectation",
+        alpha = 0.7,
+        linewidth = 2,
+    )
+    axislegend(; position = :rt)
+    # Panel B and C: reactivity vs. abundance.
+    for (i, color, K) in zip(1:2, palette[[2, 1]], [K3, K1])
+        abundance = eta .* K
+        relative_abundance = abundance / sum(abundance)
+        # Reactivity vs. abundance: scatter plot.
+        ylabel = i == 1 ? "Species reactivity" : ""
+        ax = Axis(
+            fig[2, i];
+            xlabel = "Species abundance",
+            ylabel,
+            title = title_se[i],
+            titlesize = 12,
+        )
+        scatter!(relative_abundance, reactivity; color, strokewidth, markersize)
+        ax.xticks =
+            round.(
+                [
+                    minimum(relative_abundance),
+                    mean(extrema(relative_abundance)),
+                    maximum(relative_abundance),
+                ],
+                digits = 3,
+            )
+    end
+    # Panel C: histogram of overall community response. 
+    ax4 = Axis(
+        fig[3, :];
+        xlabel = "Log community overall \n response intensity",
+        ylabel = "Frequency",
+    )
+    hist_vec = []
+    for (i, color, K_idx) in zip(1:2, palette[[2, 1]], [3, 1])
+        K = K_vec[K_idx]
+        tmp_hist = hist!(
+            ax4,
+            log10.(df[df.K_index.==K_idx, :community_response]);
+            normalization = :probability,
+            color = (color, 0.8),
+            bins = -3.2:0.2:1,
+            strokewidth = 1,
+            strokecolor = :white,
+            label = i == 1 ? "Positive" : "Negative",
+        )
+        push!(hist_vec, tmp_hist)
+    end
+    axislegend("Selection effect"; position = :rt, rowgap = 0)
+    # Label panels.
+    for (layout, label) in zip([panel_a, panel_b, panel_c, panel_d], ["A", "B", "C", "D"])
+        Label(
+            layout[1, 1, TopLeft()],
+            label;
+            font = :bold,
+            padding = (0, 5, 5, 0),
+            halign = :right,
+        )
+    end
+    isdir("figures") || mkdir("figures")
+    save(
+        "figures/02_selection-effect.pdf",
+        # "/tmp/plot.png",
+        fig;
+        size = (11 * 28.3, 28.3 * 11 * (3 / 1.62)),
+        pt_per_unit = 1,
+    )
+end
+
+# Supplementary figure.
+with_theme(publication_theme) do
     fig = Figure()
     strokewidth = 0.5
     markersize = 9
+    n_panels = 10
+    panels = Any[nothing for _ in 1:n_panels]
+    panels[1] = fig[1, 2] = GridLayout()
+    panels[2] = fig[3, 1] = GridLayout()
+    panels[3] = fig[3, 2] = GridLayout()
+    panels[4] = fig[3, 3] = GridLayout()
+    panels[5] = fig[4, 1] = GridLayout()
+    panels[6] = fig[4, 2] = GridLayout()
+    panels[7] = fig[4, 3] = GridLayout()
+    panels[8] = fig[5, 1] = GridLayout()
+    panels[9] = fig[5, 2] = GridLayout()
+    panels[10] = fig[5, 3] = GridLayout()
     title_vec = [L"\mathrm{Cov}(N, η)<0", L"\mathrm{Cov}(N, η)=0", L"\mathrm{Cov}(N, η)>0"]
     color = :grey
     for (i, K) in enumerate(K_vec)
@@ -70,30 +174,36 @@ with_theme(p_theme) do
         ax2 = Axis(fig[4, i]; xlabel = "Abundance", ylabel)
         scatter!(ax2, relative_abundance, reactivity; color, strokewidth, markersize)
         # Reactivity vs. abundance: linear fit.
-        df = DataFrame(; reactivity, relative_abundance, eta)
-        ols = lm(@formula(reactivity ~ relative_abundance), df)
+        df_tmp = DataFrame(; reactivity, relative_abundance, eta)
+        ols = lm(@formula(reactivity ~ relative_abundance), df_tmp)
         p_value = ftest(ols.model).pval
         a, b = coef(ols)
         xlims = [minimum(relative_abundance), maximum(relative_abundance)]
         ylims = a .+ b .* xlims
         linestyle = p_value > 0.05 ? :dot : :solid
-        lines!(xlims, ylims; color = :skyblue, linestyle, linewidth = 2)
-        # Total abundance vs. time.
-        abundance_true = [sum(eta_t .* K) for eta_t in eta_true] / sum(abundance)
-        abundance_lin = [sum(eta_t .* K) for eta_t in eta_lin] / sum(abundance)
-        # abundance_true = [eta_t[idx] * K[idx] for eta_t in eta_true]
-        # abundance_lin = [eta_t[idx] * K[idx] for eta_t in eta_lin]
-        ylabel = i == 1 ? "Δ tot. abundance" : ""
-        ax = Axis(fig[5, i]; xlabel = "Time", ylabel, yscale = log10)
-        lines!(time_steps, abundance_true; color = :black, label = "true", linewidth = 2)
-        lines!(
-            time_steps,
-            abundance_lin;
+        lines!(xlims, ylims; color = :skyblue, linestyle, linewidth = 2, label = "fit")
+        i == 3 && axislegend(ax2; labelsize = 10)
+        # Histogram of overall community responses.
+        limits = extrema(log10.(df.community_response))
+        ylabel = i == 1 ? "Frequency" : ""
+        ax = Axis(fig[5, i]; xlabel = "Log community overall \n response intensity", ylabel)
+        hist!(
+            log10.(df[df.K_index.==i, :community_response]);
+            normalization = :probability,
+            color = :grey,
+            # strokewidth = 1,
+            bins = 15,
+            strokewidth = 1,
+            strokecolor = :white,
+        )
+        vlines!(
+            mean(log10.(df[df.K_index.==i, :community_response]));
             color = :black,
-            label = "prediction",
             linewidth = 2,
             linestyle = :dash,
+            label = "mean",
         )
+        xlims!(limits...)
         i == 3 && axislegend(ax; labelsize = 10)
     end
     ax = Axis(fig[1, 2]; xlabel = "Relative yield", ylabel = "Reactivity")
@@ -103,20 +213,32 @@ with_theme(p_theme) do
     lines!(
         eta_linrange,
         exp_reactivity_full;
-        color = :coral,
+        color = :orange,
         label = "expectation",
         alpha = 0.7,
         linewidth = 2,
     )
-    # axislegend(; position = :lb)
-    Label(fig[2, 1:2], "Selection effect < 0"; tellwidth = false, fontsize = 20)
-    Label(fig[2, 3], "Selection effect ≥ 0"; tellwidth = false, fontsize = 20)
+    axislegend(; position = :rt)
+    Label(fig[2, 1:2], "Selection effect < 0"; tellwidth = false, fontsize = 15)
+    Label(fig[2, 3], "Selection effect ≥ 0"; tellwidth = false, fontsize = 15)
+    # Label panels.
+    for (layout, label) in zip(panels, letters)
+        Label(
+            layout[1, 1, TopLeft()],
+            label;
+            font = :bold,
+            padding = (0, 5, 5, 0),
+            halign = :right,
+        )
+    end
     isdir("figures") || mkdir("figures")
+    width = 1.1 * full_page_width * cm_to_pt
+    height = width * 2 / width_height_ratio
     save(
-        "figures/02_selection-effect.png",
+        "figures/SI_02_selection-effect.pdf",
         # "/tmp/plot.png",
         fig;
-        size = 1.1 .* (620, 620),
-        px_per_unit = 3,
+        size = (width, height),
+        pt_per_unit = 1,
     )
 end

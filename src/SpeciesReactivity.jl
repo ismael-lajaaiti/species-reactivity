@@ -18,6 +18,7 @@ export departure_from_normality
 export equilibrium_abundance
 export expected_proportional_intensity
 export expected_reactivity_squared
+export expected_reactivity_squared_naive
 export get_reactivity
 export is_stable
 export isotrope_perturbation
