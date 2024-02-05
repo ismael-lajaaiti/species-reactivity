@@ -21,7 +21,7 @@ publication_theme = Theme(;
 
 # Useful variables for plotting.
 letters = string.(collect('A':'Z')) # To label figure panels.
-palette = ColorSchemes.Accent_3
+palette = ColorSchemes.Accent_8
 
 # Save figure with physical dimension.
 cm_to_pt = 28.3465 # 1 cm = 28.3465 pt, cf. CairoMakie documentation.

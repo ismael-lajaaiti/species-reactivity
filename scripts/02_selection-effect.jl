@@ -36,6 +36,7 @@ K2 = (1 .+ rand(Normal(0, 0.1), S)) ./ eta
 K3 = (1 .+ rand(Normal(0, 0.1), S)) .* eta
 K_vec = [K1, K2, K3]
 n_perturbations = 1_000
+intensity = 0.6
 t_max = 1_000
 df = DataFrame(; K_index = Int64[], community_response = Float64[])
 for k in 1:n_perturbations
@@ -54,42 +55,55 @@ end
 # Main figure.
 with_theme(publication_theme) do
     fig = Figure()
-    panel_a = fig[1, 1:2] = GridLayout()
-    panel_b = fig[2, 1] = GridLayout()
-    panel_c = fig[2, 2] = GridLayout()
-    panel_d = fig[3, 1:2] = GridLayout()
+    g = fig[1:3, 1:6] = GridLayout()
+    g1 = g[1, 1:6] = GridLayout()
+    g23 = g[2, 1:6] = GridLayout()
+    g4 = fig[3, 1:6] = GridLayout()
     strokewidth = 0.5
     markersize = 9
     color = :grey
-    title_se = ["Positive \n selection effect", "Negative \n selection effect"]
     # Panel A: reactivity vs. relative yield.
-    ax = Axis(fig[1, 1:2]; xlabel = "Species relative yield", ylabel = "Species reactivity")
+    ax = Axis(
+        g[1, 1:6];
+        aspect = AxisAspect(1.6),
+        xlabel = "Species relative yield",
+        ylabel = "Species reactivity",
+    )
     scatter!(eta, reactivity; color, strokewidth, markersize)
     eta_linrange = LinRange(0, maximum(eta), 100)
     exp_reactivity_full = sqrt.(expected_reactivity_squared.(eta_linrange, Ref(com)))
     lines!(
         eta_linrange,
         exp_reactivity_full;
-        color = :orange,
+        color = palette[5],
         label = "expectation",
         alpha = 0.7,
         linewidth = 2,
     )
     axislegend(; position = :rt)
     # Panel B and C: reactivity vs. abundance.
-    for (i, color, K) in zip(1:2, palette[[2, 1]], [K3, K1])
+    for (i, color, K) in zip(1:3, palette[[2, 1, 3]], [K3, K2, K1])
         abundance = eta .* K
         relative_abundance = abundance / sum(abundance)
         # Reactivity vs. abundance: scatter plot.
         ylabel = i == 1 ? "Species reactivity" : ""
+        i_ = i - 1
+        col_idx = (2i_+1):(2i_+2)
         ax = Axis(
-            fig[2, i];
+            g23[2, i];
             xlabel = "Species abundance",
             ylabel,
-            title = title_se[i],
             titlesize = 12,
+            tellwidth = true,
         )
-        scatter!(relative_abundance, reactivity; color, strokewidth, markersize)
+        scatter!(
+            relative_abundance,
+            reactivity;
+            color,
+            strokewidth,
+            markersize = 7,
+            alpha = 0.8,
+        )
         ax.xticks =
             round.(
                 [
@@ -100,20 +114,24 @@ with_theme(publication_theme) do
                 digits = 3,
             )
     end
+    Label(g23[1, 1], "Positive \n selection effect"; font = :bold)
+    Label(g23[1, 2:3], "Negative selection effect"; font = :bold)
     # Panel C: histogram of overall community response. 
     ax4 = Axis(
-        fig[3, :];
+        g[3, 1:6];
+        aspect = AxisAspect(1.6),
         xlabel = "Log community overall \n response intensity",
         ylabel = "Frequency",
+        tellwidth = false,
     )
     hist_vec = []
-    for (i, color, K_idx) in zip(1:2, palette[[2, 1]], [3, 1])
+    for (i, color, K_idx) in zip(1:3, palette[[2, 3, 1]], [3, 1, 2])
         K = K_vec[K_idx]
         tmp_hist = hist!(
             ax4,
             log10.(df[df.K_index.==K_idx, :community_response]);
             normalization = :probability,
-            color = (color, 0.8),
+            color = (color, 0.7),
             bins = -3.2:0.2:1,
             strokewidth = 1,
             strokecolor = :white,
@@ -121,9 +139,10 @@ with_theme(publication_theme) do
         )
         push!(hist_vec, tmp_hist)
     end
-    axislegend("Selection effect"; position = :rt, rowgap = 0)
+    # axislegend("Selection effect"; position = :rt, rowgap = 0)
     # Label panels.
-    for (layout, label) in zip([panel_a, panel_b, panel_c, panel_d], ["A", "B", "C", "D"])
+    panels = [fig[1, 2], g23[2, 1], g23[2, 2], g23[2, 3], g[3, 2]]
+    for (layout, label) in zip(panels, letters)
         Label(
             layout[1, 1, TopLeft()],
             label;
@@ -132,12 +151,15 @@ with_theme(publication_theme) do
             halign = :right,
         )
     end
+    rowgap!(g23, 5)
     isdir("figures") || mkdir("figures")
+    width = full_page_width * cm_to_pt
+    height = width * (2 / 1.62)
     save(
-        "figures/02_selection-effect.pdf",
-        # "/tmp/plot.png",
+       # "figures/02_selection-effect.pdf",
+        "/tmp/plot.png",
         fig;
-        size = (11 * 28.3, 28.3 * 11 * (3 / 1.62)),
+        size = (width, height),
         pt_per_unit = 1,
     )
 end
