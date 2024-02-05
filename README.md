@@ -1,5 +1,7 @@
 # How biotic interactions structure species’ responses to perturbations 
 
+[![DOI](https://zenodo.org/badge/737065348.svg)](https://zenodo.org/doi/10.5281/zenodo.10619604)
+
 GitHub repository associated to the [Lajaaiti et al., 2023](change-url) article.
 
 > [!NOTE]
