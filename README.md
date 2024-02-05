@@ -7,14 +7,13 @@ GitHub repository associated to the [Lajaaiti et al., 2023](change-url) article.
 
 ## Abstract
 
-The response of communities to perturbations is usually measured at the community level which disregards
-the variability of species’ responses. We therefore know very little about how this variability is structured
-within communities. Here we break down the community response to the species level and show that this
-decomposition provides new insights on the response of the community as a whole. In both communities
-parameterized randomly or from data, we find that the more the abundance of a species is diminished by biotic
-interactions, the more strongly the species reacts to perturbations and the less predictable its recovery becomes.
-Returning to the community level, we find that when species diminished by biotic interactions nevertheless
-remain abundant, the recovery of the whole community becomes unpredictable.
+Predicting how ecological communities will respond to disturbances is a major challenge in community ecology, especially given the variability in species' responses within the same community.
+Focusing solely on aggregate responses may obscure extinction risks for certain species due to compensatory effects, emphasizing the need to understand the drivers of the response variability at the species-level. 
+Yet, these drivers remain poorly understood. 
+Here, we reveal that despite the complexity of the network of biotic interactions, species' responses follow a discernible pattern.
+Specifically, we demonstrate that species whose abundance are most reduced by biotic interactions -- which are not always the rarest species -- will be those that exhibit the strongest responses to disturbances. 
+This insight enables us to pinpoint sensitive species within communities without requiring precise information about biotic interactions. 
+Our novel approach introduces avenues for future research aimed at identifying sensitive species and elucidating their impacts on entire communities.
 
 ![pictures/visual-abstract.png](pictures/visual-abstract.png)
 
