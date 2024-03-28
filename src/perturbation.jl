@@ -29,6 +29,23 @@ function response(community::Community, x0; tspan = (0, 10_000))
     (; linear = solve(linear_pb; alg = RK4()), nonlinear = solve(nonlinear_pb; alg = RK4()))
 end
 
+
+function stochastic_response(
+    community::Community,
+    x0;
+    tspan = (0, 10_000),
+    var_noise = 1e-3,
+)
+    Neq = equilibrium_abundance(community)
+    N0 = Neq + x0
+    @assert all(N0 .> 0) # Check that there is no extinction at t = 0.
+    function environmental_noise(x, _, _)
+        [var_noise for _ in x]
+    end
+    pb = SDEProblem(jacobian_dynamics, environmental_noise, x0, tspan, jacobian(community))
+    solve(pb)
+end
+
 function isotrope_perturbation(Neq, intensity; no_extinction = false)
     S = length(Neq)
     function perturbation()
@@ -37,7 +54,6 @@ function isotrope_perturbation(Neq, intensity; no_extinction = false)
     end
     no_extinction ? perturbation_no_extinction(perturbation, Neq) : perturbation()
 end
-
 
 function proportional_perturbation(
     Neq,
@@ -124,3 +140,8 @@ function integrate(fun, tspan; n_timesteps)
     end
     integrals
 end
+
+distance_to_equilibrium(x_vector::AbstractVector) = norm(x_vector)
+distance_to_equilibrium(solution) = [distance_to_equilibrium(u) for u in solution.u]
+total_abundance(abundance_vector::AbstractVector) = sum(abundance_vector)
+total_abundance(solution) = [total_abundance(u) for u in solution.u]
