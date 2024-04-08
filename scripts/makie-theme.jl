@@ -29,3 +29,9 @@ single_column_width = 8.2 # In centimeners, cf. Ecology Letter guidelines.
 two_third_page_width = 11
 full_page_width = 17.3
 width_height_ratio = 1.5
+
+function save_figure(filename, fig, size)
+    for fmt in ["pdf", "png", "eps"]
+        save("$filename.$fmt", fig; size = size, pt_per_unit = 1)
+    end
+end

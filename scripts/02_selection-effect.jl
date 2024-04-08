@@ -9,22 +9,22 @@ using Random
 using SpeciesReactivity
 using Statistics
 
-Random.seed!(112)
+Random.seed!(123)
 
 include("makie-theme.jl") # For reproducibility.
 
-S = 30
-n = 1
-sigma = 0.25
-create_interaction_matrix(S) = random_competition_matrix(S, sigma)
-com = create_communities(S, n; create_interaction_matrix)[S][1] # Get a community.
-eta = equilibrium_abundance(com)
+# S = 30
+# n = 1
+# sigma = 0.25
+# create_interaction_matrix(S) = random_competition_matrix(S, sigma)
+# com = create_communities(S, n; create_interaction_matrix)[S][1] # Get a community.
+# eta = equilibrium_abundance(com)
 
 # Compute the probability of generating an isotrope perturbation outside the linearity
 # domain for different `intensity_values`.
 S = 50 # Community richness.
 n = 1 # Number of communities.
-sigma = 0.15
+sigma = 0.1
 create_interaction_matrix(S) = random_competition_matrix(S, sigma)
 com = create_communities(S, n; create_interaction_matrix)[S][1] # Get a community.
 A = com.A
@@ -76,7 +76,7 @@ with_theme(publication_theme) do
         eta_linrange,
         exp_reactivity_full;
         color = palette[5],
-        label = "expectation",
+        label = "Expectation",
         alpha = 0.7,
         linewidth = 2,
     )
@@ -155,112 +155,10 @@ with_theme(publication_theme) do
     isdir("figures") || mkdir("figures")
     width = full_page_width * cm_to_pt
     height = width * (2 / 1.62)
-    save(
-       # "figures/02_selection-effect.pdf",
-        "/tmp/plot.png",
-        fig;
-        size = (width, height),
-        pt_per_unit = 1,
-    )
-end
-
-# Supplementary figure.
-with_theme(publication_theme) do
-    fig = Figure()
-    strokewidth = 0.5
-    markersize = 9
-    n_panels = 10
-    panels = Any[nothing for _ in 1:n_panels]
-    panels[1] = fig[1, 2] = GridLayout()
-    panels[2] = fig[3, 1] = GridLayout()
-    panels[3] = fig[3, 2] = GridLayout()
-    panels[4] = fig[3, 3] = GridLayout()
-    panels[5] = fig[4, 1] = GridLayout()
-    panels[6] = fig[4, 2] = GridLayout()
-    panels[7] = fig[4, 3] = GridLayout()
-    panels[8] = fig[5, 1] = GridLayout()
-    panels[9] = fig[5, 2] = GridLayout()
-    panels[10] = fig[5, 3] = GridLayout()
-    title_vec = [L"\mathrm{Cov}(N, η)<0", L"\mathrm{Cov}(N, η)=0", L"\mathrm{Cov}(N, η)>0"]
-    color = :grey
-    for (i, K) in enumerate(K_vec)
-        title = title_vec[i]
-        abundance = eta .* K
-        relative_abundance = abundance / sum(abundance)
-        # Abundance vs. relative yield.
-        ylabel = i == 1 ? "Abundance (N)" : ""
-        ax = Axis(fig[3, i]; xlabel = "Relative yield (η)", ylabel, title)
-        scatter!(ax, eta, relative_abundance; color, strokewidth, markersize)
-        # Reactivity vs. abundance: scatter plot.
-        ylabel = i == 1 ? "Reactivity" : ""
-        ax2 = Axis(fig[4, i]; xlabel = "Abundance", ylabel)
-        scatter!(ax2, relative_abundance, reactivity; color, strokewidth, markersize)
-        # Reactivity vs. abundance: linear fit.
-        df_tmp = DataFrame(; reactivity, relative_abundance, eta)
-        ols = lm(@formula(reactivity ~ relative_abundance), df_tmp)
-        p_value = ftest(ols.model).pval
-        a, b = coef(ols)
-        xlims = [minimum(relative_abundance), maximum(relative_abundance)]
-        ylims = a .+ b .* xlims
-        linestyle = p_value > 0.05 ? :dot : :solid
-        lines!(xlims, ylims; color = :skyblue, linestyle, linewidth = 2, label = "fit")
-        i == 3 && axislegend(ax2; labelsize = 10)
-        # Histogram of overall community responses.
-        limits = extrema(log10.(df.community_response))
-        ylabel = i == 1 ? "Frequency" : ""
-        ax = Axis(fig[5, i]; xlabel = "Log community overall \n response intensity", ylabel)
-        hist!(
-            log10.(df[df.K_index.==i, :community_response]);
-            normalization = :probability,
-            color = :grey,
-            # strokewidth = 1,
-            bins = 15,
-            strokewidth = 1,
-            strokecolor = :white,
-        )
-        vlines!(
-            mean(log10.(df[df.K_index.==i, :community_response]));
-            color = :black,
-            linewidth = 2,
-            linestyle = :dash,
-            label = "mean",
-        )
-        xlims!(limits...)
-        i == 3 && axislegend(ax; labelsize = 10)
-    end
-    ax = Axis(fig[1, 2]; xlabel = "Relative yield", ylabel = "Reactivity")
-    scatter!(eta, reactivity; color, strokewidth, markersize)
-    eta_linrange = LinRange(0, maximum(eta), 100)
-    exp_reactivity_full = sqrt.(expected_reactivity_squared.(eta_linrange, Ref(com)))
-    lines!(
-        eta_linrange,
-        exp_reactivity_full;
-        color = :orange,
-        label = "expectation",
-        alpha = 0.7,
-        linewidth = 2,
-    )
-    axislegend(; position = :rt)
-    Label(fig[2, 1:2], "Selection effect < 0"; tellwidth = false, fontsize = 15)
-    Label(fig[2, 3], "Selection effect ≥ 0"; tellwidth = false, fontsize = 15)
-    # Label panels.
-    for (layout, label) in zip(panels, letters)
-        Label(
-            layout[1, 1, TopLeft()],
-            label;
-            font = :bold,
-            padding = (0, 5, 5, 0),
-            halign = :right,
-        )
-    end
-    isdir("figures") || mkdir("figures")
-    width = 1.1 * full_page_width * cm_to_pt
-    height = width * 2 / width_height_ratio
-    save(
-        "figures/SI_02_selection-effect.pdf",
+    save_figure(
+        "figures/02_selection-effect",
         # "/tmp/plot.png",
-        fig;
-        size = (width, height),
-        pt_per_unit = 1,
+        fig,
+        (width, height),
     )
 end

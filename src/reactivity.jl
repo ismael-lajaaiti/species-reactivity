@@ -33,6 +33,27 @@ function expected_reactivity_squared(eta_i, com)
     a * (norm(eta)^2 - eta_i^2)
 end
 
+function expected_reactivity_squared(eta_i, com, C)
+    S = richness(com)
+    d = S - 1
+    A = remove_diagonal(com.A)
+    eta = equilibrium_abundance(com)
+    mean_ai = C * mean(A[A.!=0])
+    mean_ai2 = C * mean(A[A.!=0] .^ 2)
+    D_i = get_Di(eta, eta_i)
+    d_i = get_di(eta, eta_i)
+    d_i_prime = get_di_prime(eta, eta_i)
+    a =
+        mean_ai2 * (1 - 1 / d_i) -
+        mean_ai^2 * (2 * sqrt(D_i / d_i_prime) - D_i / d_i - 1 / d_i) +
+        2 *
+        mean_ai *
+        ((1 - eta_i) / (sum(eta) - eta_i)) *
+        (D_i / d_i - sqrt(D_i / d_i_prime)) +
+        (D_i / d_i) * ((1 - eta_i) / (sum(eta) - eta_i))^2
+    a * (norm(eta)^2 - eta_i^2)
+end
+
 function expected_reactivity_squared_naive(eta_i, com)
     S = richness(com)
     d = S - 1

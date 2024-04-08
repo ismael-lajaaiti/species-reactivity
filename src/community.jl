@@ -64,7 +64,7 @@ Compute the abundance at equilibrium assuming a Lotka-Volterra system.
 
 See also [`Community`](@ref).
 """
-equilibrium_abundance(community::Community) = -inv(community.A) * community.r
+equilibrium_abundance(community::Community) = -inv(community.A) * fill(1, richness(community))
 
 """
     jacobian(community::Community)
@@ -76,7 +76,7 @@ See also [`Community`](@ref).
 """
 function jacobian(community::Community)
     Neq = equilibrium_abundance(community)
-    Diagonal(Neq) * community.A
+    Diagonal(Neq .* community.r) * community.A
 end
 
 reactivity(j) = eigvals((j + transpose(j)) / 2)[end]
@@ -108,7 +108,7 @@ end
 Lotka-Volterra differential equations of the species abundances `N`.
 """
 function lotka_volterra(N, community::Community, _)
-    Diagonal(N) * (community.r + community.A * N)
+    Diagonal(N .* community.r) * (1 .+ community.A * N)
 end
 
 """
@@ -122,7 +122,7 @@ and second item the species [`equilibrium_abundance`](@ref).
 """
 function equilibrium_lotka_volterra(x, p, _)
     community, Neq = p
-    Diagonal(Neq + x) * (community.A * x)
+    Diagonal(community.r .* (Neq + x)) * (community.A * x)
 end
 
 """
@@ -239,7 +239,7 @@ See also [`Community`](@ref) and [`keep_surviving!`](@ref).
 """
 function assemble!(community::Community; tspan = (0, 1_000), extinction_threshold = 1e-6, return_surviving = false)
     S = richness(community)
-    N0 = rand(Uniform(0.1, 1), S)
+    N0 = rand(Uniform(0.5, 1), S)
     problem = ODEProblem(lotka_volterra, N0, tspan, community)
     sol = solve(problem)
     if sol.retcode == :DtLessThanMin # Error during simulation, return empty community.
@@ -323,7 +323,8 @@ function create_communities(
             end
         end
         # Increase Smin_pool if all community of lower richness are already filled.
-        Smin_pool = findfirst(S -> !is_filled(community_dict[S]), Smin:Smax)
+        idx = findfirst(S -> !is_filled(community_dict[S]), Smin:Smax)
+        Smin_pool = isnothing(idx) ? nothing : Srange[idx]
         verbose && @info "Iteration $iter: $(length.(values(community_dict)))"
         iter += 1
     end

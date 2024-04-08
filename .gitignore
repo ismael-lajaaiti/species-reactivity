@@ -1,4 +1,5 @@
 /Manifest.toml
 /use-case/Manifest.toml
 /docs/build/
-/use-case/figures/*
+/scripts/figures/*
+/drawing/*
