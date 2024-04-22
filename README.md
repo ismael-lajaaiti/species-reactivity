@@ -1,12 +1,5 @@
 # How biotic interactions structure species’ responses to perturbations 
 
-[![DOI](https://zenodo.org/badge/737065348.svg)](https://zenodo.org/doi/10.5281/zenodo.10619604)
-
-GitHub repository associated to the [Lajaaiti et al., 2023](change-url) article.
-
-> [!NOTE]
-> If you have any questions, please [open an issue](https://github.com/ismael-lajaaiti/species-reactivity/issues) or contact me by e-mail at ismael.lajaaiti@gmail.com.
-
 ## Abstract
 
 Predicting how ecological communities will respond to disturbances is a major challenge in community ecology, especially given the variability in species' responses within the same community.
