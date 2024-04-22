@@ -16,10 +16,6 @@ Our novel approach introduces avenues for future research aimed at identifying s
 
 To reproduce figures of the article, first you have to clone this repository.
 
-```bash
-git clone git@github.com:ismael-lajaaiti/species-reactivity.git
-```
-
 Secondly, you can move to the `scripts/` directory and install the required package automatically with:
 
 ```bash
