@@ -76,7 +76,7 @@ with_theme(publication_theme) do
         eta_linrange,
         exp_reactivity_full;
         color = palette[5],
-        label = "Expectation",
+        label = "Prediction",
         alpha = 0.7,
         linewidth = 2,
     )
@@ -157,7 +157,7 @@ with_theme(publication_theme) do
     height = width * (2 / 1.62)
     save_figure(
         "figures/02_selection-effect",
-        # "/tmp/plot.png",
+        # "/tmp/plot",
         fig,
         (width, height),
     )

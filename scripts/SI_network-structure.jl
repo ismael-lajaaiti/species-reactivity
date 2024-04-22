@@ -146,8 +146,8 @@ with_theme(publication_theme) do
     width = full_page_width * cm_to_pt
     height = 3 * width * 0.7 / width_height_ratio
     save_figure(
-        "figures/SI_network-structure",
-        # "/tmp/plot",
+        # "figures/SI_network-structure",
+        "/tmp/plot",
         fig,
         (width, height),
     )

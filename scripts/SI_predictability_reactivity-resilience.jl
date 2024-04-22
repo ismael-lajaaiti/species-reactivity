@@ -87,7 +87,7 @@ with_theme(publication_theme) do
     height = width / width_height_ratio
     save_figure(
         "figures/SI_predictability",
-        # "/tmp/plot.png",
+        # "/tmp/plot",
         fig,
         (width, height),
     )
