@@ -11,6 +11,7 @@ using QuadGK
 using Random
 using SpeciesReactivity
 using Statistics
+using StatsBase
 
 include("makie-theme.jl")
 
@@ -81,6 +82,7 @@ function generate_communities_from_data(n_communities, df_A, df_K; se = :any)
                     push!(K_communities, K)
                     push!(eta_communities, eta)
                     iter += 1
+                    @info length(communities)
                 end
             end
         end
@@ -90,9 +92,14 @@ end
 
 function get_K(c, surviving_species, df_K)
     df = df_K[in.(df_K[:, "Species"], Ref(surviving_species)), :]
-    [rand(Normal(row["50"], row["sigma"])) for row in eachrow(df)]
+    K = fill(0, richness(c))
+    while any(K .<= 0)
+        K = [rand(Normal(row["50"], row["sigma"])) for row in eachrow(df)]
+    end
+    K
 end
 
+Random.seed!(123) # For reproducibility.
 communities, K_communities, eta_communities =
     generate_communities_from_data(10, df_A, df_K; se = :any)
 eta_flat = reduce(vcat, eta_communities)
@@ -102,9 +109,28 @@ abundance_communities = [eta .* K for (eta, K) in zip(eta_communities, K_communi
 abundance_communities = [abundance ./ sum(abundance) for abundance in abundance_communities]
 se_communities = [cov(K, eta) for (K, eta) in zip(K_communities, eta_communities)]
 
+# Random.seed!(10) # For reproducibility.
+# Generate communities in parallel for time efficiency.
+n_threads = 5
+n_com_per_thread = 10
+community_set2 = Dict()
+for se in se_symbols
+    @info se
+    c_list = Any[undef for _ in 1:n_threads]
+    K_list = Any[undef for _ in 1:n_threads]
+    eta_list = Any[undef for _ in 1:n_threads]
+    Threads.@threads for thr in 1:n_threads
+        c, K, eta = generate_communities_from_data(n_com_per_thread, df_A, df_K; se)
+        c_list[thr] = c
+        K_list[thr] = K
+        eta_list[thr] = eta
+    end
+    community_set2[se] = (vcat(c_list...), vcat(K_list...), vcat(eta_list...))
+end
+
 n_perturbations = 100
 n_communities = 10
-intensity = 0.6
+intensity = 0.9
 t_max = 1_000
 se_dict_value = Dict(:negative => -1, :null => 0, :positive => 1)
 se_symbols = [:positive, :negative]
@@ -112,18 +138,20 @@ community_set = Dict(
     se => generate_communities_from_data(n_communities, df_A, df_K; se) for
     se in se_symbols
 )
+
 create_df() = DataFrame(; selection_effect = Int64[], community_response = Float64[])
 df_vec = Any[nothing for _ in 1:length(se_symbols)]
 Threads.@threads for se_idx in 1:2
     se = se_symbols[se_idx]
     df = create_df()
-    coms, K_coms, eta_coms = generate_communities_from_data(n_communities, df_A, df_K; se)
+    coms, K_coms, eta_coms = community_set2[se]
     for (com, K, eta) in zip(coms, K_coms, eta_coms)
         @info "New community."
         S = richness(com)
         A = com.A
         for k in 1:n_perturbations
-            x0 = proportional_perturbation(eta, intensity * sqrt(S), 1, true)
+            x0 = prop_perturbation(eta, intensity; no_extinction = true)
+            # x0 = proportional_perturbation(eta, intensity * sqrt(S), 1, true)
             r = SpeciesReactivity.response(com, x0)
             delta_total_abundance(delta_eta) = abs(sum(K .* delta_eta))
             a = delta_total_abundance(x0) * t_max
@@ -172,28 +200,45 @@ with_theme(publication_theme) do
             fig[2, i];
             xlabel = "Species abundance",
             ylabel,
+            # yscale = log10,
+            xscale = log10,
             title = title_se[i],
             titlesize = 12,
         )
         R0_N_slopes = Float64[]
-        com_set, K_set, eta_set = community_set[se]
+        com_set, K_set, eta_set = community_set2[se]
         reactivity_set = get_reactivity.(com_set)
         abundance_set = [eta .* K for (eta, K) in zip(eta_set, K_set)]
         abundance_set = [abundance ./ sum(abundance) for abundance in abundance_set]
+        @info any(vcat(K_set...) .< 0)
+        rho = round(cor(vcat(reactivity_set...), vcat(abundance_set...)); digits = 2)
+        @info se, rho
+        text!(
+            ax,
+            0.05,
+            0.85;
+            text = "ρ = $rho",
+            offset = (3, -2),
+            align = (:left, :top),
+            fontsize = 10,
+            # color = :black,
+        )
         for (abundance, reactivity, K) in zip(abundance_set, reactivity_set, K_set)
-            scatter!(abundance, reactivity; markersize = 7, strokewidth)
+            scatter!(abundance, reactivity; markersize = 7, strokewidth, alpha = 1)
         end
+        i == 1 && (ax.xticks = [1e-2, 1e-1, 1])
+        i == 2 && (ax.xticks = [1e-2, 0.05, 0.3])
         # i == 2 && axislegend()
-        reactivity_flat = reduce(vcat, reactivity_set)
-        abundance_flat = reduce(vcat, abundance_set)
-        df_tmp = DataFrame(; reactivity_flat, abundance_flat)
-        ols = lm(@formula(reactivity_flat ~ abundance_flat), df_tmp)
-        p_value = ftest(ols.model).pval
-        a, b = coef(ols)
-        xlims = [minimum(abundance_flat), maximum(abundance_flat)]
-        ylims = a .+ b .* xlims
-        linestyle = p_value > 0.05 ? :dot : :solid
-        lines!(xlims, ylims; color = :grey, linestyle, linewidth = 2)
+        # reactivity_flat = reduce(vcat, reactivity_set)
+        # abundance_flat = reduce(vcat, abundance_set)
+        # df_tmp = DataFrame(; reactivity_flat, abundance_flat)
+        # ols = lm(@formula(reactivity_flat ~ abundance_flat), df_tmp)
+        # p_value = ftest(ols.model).pval
+        # a, b = coef(ols)
+        # xlims = [minimum(abundance_flat), maximum(abundance_flat)]
+        # ylims = a .+ b .* xlims
+        # linestyle = p_value > 0.05 ? :dot : :solid
+        # lines!(xlims, ylims; color = :grey, linestyle, linewidth = 2)
     end
     # for (N, reactivity) in zip(abundance_communities, reactivity_communities)
     #     scatter!(N, reactivity; markersize, strokewidth)
@@ -202,27 +247,27 @@ with_theme(publication_theme) do
     ax3 = Axis(
         fig[3, 1:2];
         xlabel = "Log community overall \n response intensity",
-        ylabel = "Frequency",
-        # xticks = (-1:1, ["Negative", "Null", "Positive"]),
+        ylabel = "Density",
     )
     for (se, color) in zip([1, -1], palette[[2, 1]])
         sdf = df[df.selection_effect.==se, :]
-        tmp_hist = hist!(
+        tmp_hist = density!(
             ax3,
             log10.(sdf.community_response);
-            normalization = :probability,
-            color = (color, 0.7),
-            bins = -3.4:0.2:0.4,
-            strokewidth = 1,
-            strokecolor = :white,
+            color = (color, 0.3),
+            strokecolor = color,
+            strokewidth = 1.4,
             label = se == 1 ? "Positive" : "Negative",
         )
-        # boxplot!(
-        #     sdf.selection_effect,
+        # tmp_hist = hist!(
+        #     ax3,
         #     log10.(sdf.community_response);
-        #     show_outliers = false,
-        #     whiskerwidth = 0.5,
-        #     color,
+        #     normalization = :probability,
+        #     color = (color, 0.7),
+        #     bins = -3.4:0.2:0.4,
+        #     strokewidth = 1,
+        #     strokecolor = :white,
+        #     label = se == 1 ? "Positive" : "Negative",
         # )
     end
     axislegend("Selection effect"; position = :rt, rowgap = 0)
@@ -239,68 +284,10 @@ with_theme(publication_theme) do
     isdir("figures") || mkdir("figures")
     width = two_third_page_width * cm_to_pt
     height = width * 2.6 / width_height_ratio
-    save(
-        # "/tmp/plot.png",
-        "figures/03_data.pdf",
-        fig;
-        size = (width, height),
-        pt_per_unit = 1,
+    save_figure(
+        # "/tmp/plot",
+        "figures/03_data",
+        fig,
+        (width, height),
     )
 end
-
-# Figure for supplementary material.
-# with_theme(publication_theme) do
-#     fig = Figure()
-#     markersize = 9
-#     linewidth = 2
-#     strokewidth = 0.5
-#     panel_a = fig[1, 1] = GridLayout()
-#     panel_b = fig[1, 2] = GridLayout()
-#     # Panel A: Abundance vs. relative yield.
-#     ax = Axis(
-#         fig[1, 1];
-#         xlabel = "Relative yield",
-#         ylabel = "Abundance",
-#         title = L"\mathrm{Cov}(N, \eta) > 0",
-#     )
-#     for (eta, N) in zip(eta_communities, abundance_communities)
-#         scatter!(eta, N; markersize, strokewidth)
-#     end
-#     # Panel B: carrying capacity vs. relative yield (selection effect).
-#     ax1 = Axis(
-#         fig[1, 2];
-#         xlabel = "Relative yield",
-#         ylabel = "Carrying capacity",
-#         title = "Overall \n selection effet ≃ 0",
-#     )
-#     for (eta, K) in zip(eta_communities, K_communities)
-#         scatter!(eta, K; markersize, strokewidth)
-#     end
-#     K_flat = reduce(vcat, K_communities)
-#     df_tmp = DataFrame(; eta_flat, K_flat)
-#     ols = lm(@formula(K_flat ~ eta_flat), df_tmp)
-#     p_value = ftest(ols.model).pval
-#     a, b = coef(ols)
-#     xlims = [minimum(eta_flat), maximum(eta_flat)]
-#     ylims = a .+ b .* xlims
-#     linestyle = p_value > 0.05 ? :dot : :solid
-#     lines!(xlims, ylims; color = :grey, linestyle, linewidth = 3)
-#     # Label panels.
-#     for (layout, label) in zip([panel_a, panel_b], ["A", "B"])
-#         Label(
-#             layout[1, 1, TopLeft()],
-#             label;
-#             font = :bold,
-#             padding = (0, 5, 5, 0),
-#             halign = :right,
-#         )
-#     end
-#     isdir("figures") || mkdir("figures")
-#     save(
-#         "/tmp/plot.png",
-#         # "figures/SI_03_data.png",
-#         fig;
-#         size = (200 * 1.3 * 2, 200),
-#         px_per_unit = 3,
-#     )
-# end

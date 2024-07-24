@@ -8,17 +8,15 @@ using Random
 using SpeciesReactivity
 using Statistics
 
-Random.seed!(111) # For reproduciblity.
+Random.seed!(123) # For reproduciblity.
 
 include("makie-theme.jl")
 
-# Compute the probability of generating an isotrope perturbation outside the linearity
-# domain for different `intensity_values`.
 S = 50 # Community richness.
 n_communities = 1 # Number of communities.
 mu = 0.0
 sigma = 0.1
-t_max = 1_000 # Duration of observation.
+t_max = 1_000 # Duration of simulation.
 create_interaction_matrix(S) = random_competition_matrix(S, mu, sigma)
 com = create_communities(S, n_communities; create_interaction_matrix)[S][1]
 create_df() =
@@ -31,7 +29,8 @@ yield = equilibrium_abundance(com)
 reactivity = [get_reactivity(com.A, yield, i) for i in 1:S]
 for k in 1:n_perturbations
     @info "Perturbation $k"
-    x0 = proportional_perturbation(yield, intensity * sqrt(S), 1, true)
+    # x0 = proportional_perturbation(yield, intensity * sqrt(S), 1, true)
+    x0 = prop_perturbation(yield, intensity; no_extinction = true)
     r = SpeciesReactivity.response(com, x0)
     for i in 1:S
         deviation = trajectory_error(
@@ -49,7 +48,6 @@ end
 processed_df = combine(
     groupby(df, [:reactivity, :yield]),
     :overall_response => mean => :overall_response,
-    # :overall_response => maximum => :overall_response_worst,
     :overall_response =>
         (x -> std(x) / sqrt(n_perturbations)) => :overall_response_error,
 )

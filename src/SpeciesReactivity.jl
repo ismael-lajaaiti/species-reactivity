@@ -29,6 +29,7 @@ export lotka_volterra
 export nonlinear_excursion_data
 export nonlinear_reactivity
 export proportional_perturbation
+export prop_perturbation
 export random_competition_matrix
 export remove_diagonal
 export response

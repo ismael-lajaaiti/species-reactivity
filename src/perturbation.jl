@@ -38,6 +38,10 @@ function isotrope_perturbation(Neq, intensity; no_extinction = false)
     no_extinction ? perturbation_no_extinction(perturbation, Neq) : perturbation()
 end
 
+function prop_perturbation(yield, intensity; no_extinction = false)
+    perturbation() = intensity * rand(Normal(), length(yield)) .* yield
+    no_extinction ? perturbation_no_extinction(perturbation, yield) : perturbation()
+end
 
 function proportional_perturbation(
     Neq,

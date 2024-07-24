@@ -64,7 +64,8 @@ Compute the abundance at equilibrium assuming a Lotka-Volterra system.
 
 See also [`Community`](@ref).
 """
-equilibrium_abundance(community::Community) = -inv(community.A) * fill(1, richness(community))
+equilibrium_abundance(community::Community) =
+    -inv(community.A) * fill(1, richness(community))
 
 """
     jacobian(community::Community)
@@ -108,6 +109,7 @@ end
 Lotka-Volterra differential equations of the species abundances `N`.
 """
 function lotka_volterra(N, community::Community, _)
+    any(abs.(N) .> 1e3) && return fill(0, length(N)) # Patch to avoid exploding dynamics.
     Diagonal(N .* community.r) * (1 .+ community.A * N)
 end
 
@@ -237,12 +239,19 @@ true
 
 See also [`Community`](@ref) and [`keep_surviving!`](@ref).
 """
-function assemble!(community::Community; tspan = (0, 1_000), extinction_threshold = 1e-6, return_surviving = false)
+function assemble!(
+    community::Community;
+    tspan = (0, 1_000),
+    extinction_threshold = 1e-6,
+    return_surviving = false,
+)
     S = richness(community)
     N0 = rand(Uniform(0.5, 1), S)
     problem = ODEProblem(lotka_volterra, N0, tspan, community)
     sol = solve(problem)
-    if sol.retcode == :DtLessThanMin # Error during simulation, return empty community.
+    if sol.retcode == :DtLessThanMin || sol.retcode == ReturnCode.MaxIters
+        # Error during simulation, return empty community.
+        # @info sol.t
         empty!(community)
         return nothing
     end
@@ -339,16 +348,12 @@ Create `n` Lotka-Volterra [`Community`](@ref) of size `S`.
 create_communities(S, n; kwargs...) = create_communities(S, S, n; kwargs...)
 
 complexity(c::Community) = complexity(c.A)
-function complexity(A::AbstractMatrix)
-    norm(A - Diagonal(A))
-end
+complexity(A::AbstractMatrix) = norm(A - Diagonal(A))
 
 departure_from_normality(c::Community) = departure_from_normality(c.A)
-function departure_from_normality(A)
-    sqrt(norm(A)^2 - sum(norm.(eigvals(A)).^2))
-end
+departure_from_normality(A) = sqrt(norm(A)^2 - sum(norm.(eigvals(A)) .^ 2))
 
 function shannon_diversity(Neq)
     p = Neq / sum(Neq)
-    exp(- sum(p .* log.(p)))
+    exp(-sum(p .* log.(p)))
 end
