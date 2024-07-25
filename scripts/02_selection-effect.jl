@@ -9,9 +9,9 @@ using Random
 using SpeciesReactivity
 using Statistics
 
-Random.seed!(14)
+Random.seed!(14) # For reproducibility.
 
-include("makie-theme.jl") # For reproducibility.
+include("makie-theme.jl")
 
 S = 50 # Community richness.
 n = 50 # Number of communities.
@@ -139,21 +139,9 @@ with_theme(publication_theme) do
             strokecolor = color,
             strokewidth = 1.4,
         )
-        # tmp_hist = hist!(
-        #     ax4,
-        #     # df[df.K_index.==K_idx, :community_response];
-        #     log10.(df[df.K_index.==K_idx, :community_response]);
-        #     normalization = :probability,
-        #     color = (color, 0.6),
-        #     bins = -3.2:0.1:0.1,
-        #     strokewidth = 1,
-        #     strokecolor = :white,
-        #     label = i == 1 ? "Positive" : "Negative",
-        # )
         push!(hist_vec, tmp_hist)
     end
     xlims!(-3.3, 0)
-    # axislegend("Selection effect"; position = :rt, rowgap = 0)
     # Label panels.
     panels = [fig[1, 2], g23[2, 1], g23[2, 2], g23[2, 3], g[3, 2]]
     for (layout, label) in zip(panels, letters)
@@ -165,7 +153,6 @@ with_theme(publication_theme) do
             halign = :right,
         )
     end
-    # xlims!(-0.1, 0.2)
     rowgap!(g23, 5)
     isdir("figures") || mkdir("figures")
     width = full_page_width * cm_to_pt

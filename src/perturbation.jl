@@ -29,6 +29,13 @@ function response(community::Community, x0; tspan = (0, 10_000))
     (; linear = solve(linear_pb; alg = RK4()), nonlinear = solve(nonlinear_pb; alg = RK4()))
 end
 
+
+"""
+    isotrope_perturbation(Neq, intensity; no_extinction = false)
+
+Generate an isotropic perturbation of give `intensity`, that corresponds to the norm of the
+perturbation vector.
+"""
 function isotrope_perturbation(Neq, intensity; no_extinction = false)
     S = length(Neq)
     function perturbation()
@@ -38,11 +45,29 @@ function isotrope_perturbation(Neq, intensity; no_extinction = false)
     no_extinction ? perturbation_no_extinction(perturbation, Neq) : perturbation()
 end
 
+"""
+    prop_perturbation(yield, intensity; no_extinction = false)
+
+Generate a perturbation whose coefficeints are proportional to the `yield` vector.
+The `intensity` parameter determines the magnitude of the perturbation.
+"""
 function prop_perturbation(yield, intensity; no_extinction = false)
     perturbation() = intensity * rand(Normal(), length(yield)) .* yield
     no_extinction ? perturbation_no_extinction(perturbation, yield) : perturbation()
 end
 
+
+"""
+    proportional_perturbation(
+    Neq,
+    expected_intensity,
+    scaling_factor,
+    no_extinction = false,
+
+)
+
+Deprecated, use `prop_perturbation` instead.
+"""
 function proportional_perturbation(
     Neq,
     expected_intensity,

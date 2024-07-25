@@ -346,14 +346,3 @@ end
 Create `n` Lotka-Volterra [`Community`](@ref) of size `S`.
 """
 create_communities(S, n; kwargs...) = create_communities(S, S, n; kwargs...)
-
-complexity(c::Community) = complexity(c.A)
-complexity(A::AbstractMatrix) = norm(A - Diagonal(A))
-
-departure_from_normality(c::Community) = departure_from_normality(c.A)
-departure_from_normality(A) = sqrt(norm(A)^2 - sum(norm.(eigvals(A)) .^ 2))
-
-function shannon_diversity(Neq)
-    p = Neq / sum(Neq)
-    exp(-sum(p .* log.(p)))
-end

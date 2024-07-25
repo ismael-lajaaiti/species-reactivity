@@ -12,7 +12,6 @@ using Random
 using SpeciesReactivity
 using Statistics
 using StatsBase
-
 include("makie-theme.jl")
 
 Random.seed!(112) # For reproducibility.
@@ -109,7 +108,6 @@ abundance_communities = [eta .* K for (eta, K) in zip(eta_communities, K_communi
 abundance_communities = [abundance ./ sum(abundance) for abundance in abundance_communities]
 se_communities = [cov(K, eta) for (K, eta) in zip(K_communities, eta_communities)]
 
-# Random.seed!(10) # For reproducibility.
 # Generate communities in parallel for time efficiency.
 n_threads = 5
 n_com_per_thread = 10
@@ -210,9 +208,7 @@ with_theme(publication_theme) do
         reactivity_set = get_reactivity.(com_set)
         abundance_set = [eta .* K for (eta, K) in zip(eta_set, K_set)]
         abundance_set = [abundance ./ sum(abundance) for abundance in abundance_set]
-        @info any(vcat(K_set...) .< 0)
         rho = round(cor(vcat(reactivity_set...), vcat(abundance_set...)); digits = 2)
-        @info se, rho
         text!(
             ax,
             0.05,
@@ -221,28 +217,13 @@ with_theme(publication_theme) do
             offset = (3, -2),
             align = (:left, :top),
             fontsize = 10,
-            # color = :black,
         )
         for (abundance, reactivity, K) in zip(abundance_set, reactivity_set, K_set)
             scatter!(abundance, reactivity; markersize = 7, strokewidth, alpha = 1)
         end
         i == 1 && (ax.xticks = [1e-2, 1e-1, 1])
         i == 2 && (ax.xticks = [1e-2, 0.05, 0.3])
-        # i == 2 && axislegend()
-        # reactivity_flat = reduce(vcat, reactivity_set)
-        # abundance_flat = reduce(vcat, abundance_set)
-        # df_tmp = DataFrame(; reactivity_flat, abundance_flat)
-        # ols = lm(@formula(reactivity_flat ~ abundance_flat), df_tmp)
-        # p_value = ftest(ols.model).pval
-        # a, b = coef(ols)
-        # xlims = [minimum(abundance_flat), maximum(abundance_flat)]
-        # ylims = a .+ b .* xlims
-        # linestyle = p_value > 0.05 ? :dot : :solid
-        # lines!(xlims, ylims; color = :grey, linestyle, linewidth = 2)
     end
-    # for (N, reactivity) in zip(abundance_communities, reactivity_communities)
-    #     scatter!(N, reactivity; markersize, strokewidth)
-    # end
     # Panel C: community response vs. selection effect.
     ax3 = Axis(
         fig[3, 1:2];
@@ -259,16 +240,6 @@ with_theme(publication_theme) do
             strokewidth = 1.4,
             label = se == 1 ? "Positive" : "Negative",
         )
-        # tmp_hist = hist!(
-        #     ax3,
-        #     log10.(sdf.community_response);
-        #     normalization = :probability,
-        #     color = (color, 0.7),
-        #     bins = -3.4:0.2:0.4,
-        #     strokewidth = 1,
-        #     strokecolor = :white,
-        #     label = se == 1 ? "Positive" : "Negative",
-        # )
     end
     axislegend("Selection effect"; position = :rt, rowgap = 0)
     # Label panels.

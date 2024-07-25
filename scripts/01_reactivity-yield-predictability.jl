@@ -7,10 +7,9 @@ using QuadGK
 using Random
 using SpeciesReactivity
 using Statistics
+include("makie-theme.jl")
 
 Random.seed!(123) # For reproduciblity.
-
-include("makie-theme.jl")
 
 S = 50 # Community richness.
 n_communities = 1 # Number of communities.
@@ -29,7 +28,6 @@ yield = equilibrium_abundance(com)
 reactivity = [get_reactivity(com.A, yield, i) for i in 1:S]
 for k in 1:n_perturbations
     @info "Perturbation $k"
-    # x0 = proportional_perturbation(yield, intensity * sqrt(S), 1, true)
     x0 = prop_perturbation(yield, intensity; no_extinction = true)
     r = SpeciesReactivity.response(com, x0)
     for i in 1:S
@@ -111,8 +109,8 @@ with_theme(publication_theme) do
     width = full_page_width * cm_to_pt
     height = width * 0.7 / width_height_ratio
     save_figure(
-        "figures/01_reactivity-yield-overall-response",
-        # "/tmp/plot",
+        # "figures/01_reactivity-yield-overall-response",
+        "/tmp/plot",
         fig,
         (width, height),
     )
