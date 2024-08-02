@@ -30,7 +30,7 @@ A = com.A
 A_nodiag = A - Diagonal(A)
 yield = equilibrium_abundance(com)
 reactivity = [get_reactivity(A, yield, i) for i in 1:S]
-mean_a_ij_square = vec(mean(A .^ 2; dims = 2))
+mean_a_ij_square = vec(mean(A_nodiag .^ 2; dims = 2))
 
 
 # Main figure.
@@ -47,13 +47,14 @@ with_theme(publication_theme) do
     reactivity = [get_reactivity(com.A, eta_eq, i) for i in 1:S]
     exp_reactivity_full = sqrt.(expected_reactivity_squared.(eta, Ref(com)))
     exp_reactivity_naive = sqrt.(expected_reactivity_squared_naive.(eta, Ref(com)))
+    exp_interaction = exp_reactivity_full .^ 2 ./ (norm(eta_eq)^2 .- eta .^ 2)
     scatter!(eta_eq, reactivity; color, markersize, strokewidth)
     linewidth = 2
     alpha = 0.7
     naive_exp = lines!(
         eta,
         exp_reactivity_naive;
-        label = "Naive",
+        label = L"\mathbb{E}(a_{ij}^2) = \mathrm{cste}",
         linewidth,
         alpha,
         color = palette[6],
@@ -61,18 +62,26 @@ with_theme(publication_theme) do
     full_exp = lines!(
         eta,
         exp_reactivity_full;
-        label = "Full",
+        label = L"\mathbb{E}(a_{ij}^2) = f(\eta_i)",
         linewidth,
         alpha,
         color = palette[5],
     )
-    axislegend()
+    fig[1, 3] = Legend(fig, ax1, "Predictions"; framevisible = false)
     ax2 = Axis(
         fig[1, 2];
         xlabel = "Species relative yield",
         ylabel = "Mean received interaction",
     )
     scatter!(yield, mean_a_ij_square; color, markersize, strokewidth)
+    lines!(eta, exp_interaction; linewidth, alpha, color = palette[5])
+    lines!(
+        eta,
+        fill(mean(mean_a_ij_square), length(eta));
+        linewidth,
+        alpha,
+        color = palette[6],
+    )
     for (layout, label) in zip([a, b], ["A", "B"])
         Label(
             layout[1, 1, TopLeft()],
@@ -84,11 +93,11 @@ with_theme(publication_theme) do
     end
     isdir("figures") || mkdir("figures")
     width = full_page_width * cm_to_pt
-    height = width * 0.7 / width_height_ratio
+    height = width * 0.6 / width_height_ratio
     save_figure(
         "figures/SI_expectation",
-        # "/tmp/plot.png",
+        # "/tmp/plot",
         fig,
-        (width, height),
+        1.2 .* (width, height),
     )
 end

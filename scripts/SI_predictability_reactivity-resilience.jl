@@ -151,13 +151,13 @@ with_theme(publication_theme) do
     )
     ax3 = Axis(
         fig[1, 3];
-        xlabel = "Inverse of \n species resistance",
+        xlabel = "Species maximum \n displacement",
         # ylabel = "Species response intensity",
         yscale = log10,
         # xscale = log10,
     )
     ratio = processed_df.reactivity ./ processed_df.yield
-    f(x) = x / (1 + x)
+    f(x) = x / sqrt(1 + x^2)
     errorbars!(
         f.(ratio),
         processed_df.overall_response,
